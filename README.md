@@ -47,7 +47,10 @@ harus menyediakan jalur `/api-go` yang sama, atau set `VITE_API_GO` ke alamat ya
 | Endpoint | Method | Dipakai untuk |
 | --- | --- | --- |
 | `matrix/kanwils` | GET | Pilihan filter Pemimpin Wilayah (portal Direksi). Kalau tidak terjangkau, dipakai daftar lokal. |
-| `matrix/branches?branchMatrixDistribution={code}` | GET | Pilihan filter Pimpinan Cabang. `code` diambil dari pilihan filter wilayah (`kanwils`). Kalau tidak terjangkau, dipakai daftar lokal. |
+| `matrix/branches` | POST, body `{"kanwil": "<value>"}` | Pilihan filter Pimpinan Cabang. `value` diambil dari pilihan filter wilayah (`kanwils`). Kalau tidak terjangkau, dipakai daftar lokal. |
+| `matrix/marketings` | POST, body `{"branch": "<value>"}` | Pilihan filter Marketing Officer. `value` diambil dari pilihan filter cabang (`branches`). Cabang tanpa MO mengembalikan `[]`. |
+
+Ketiga endpoint mengembalikan `{ success, data: [{ value, label }] }`.
 
 Klien ada di `src/api/matrix.ts`.
 

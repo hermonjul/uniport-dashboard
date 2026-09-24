@@ -1,10 +1,12 @@
 import { idUnitDariKodeApi } from '../api/matrix';
 import { useCabang } from '../api/useCabang';
 import { useKanwil, type StatusKanwil } from '../api/useKanwil';
+import { useMarketing } from '../api/useMarketing';
 import {
   pilihanCabang, pilihanKanwil, pilihanMO, posisiCakupan, type Cakupan,
 } from '../logika/agregasi';
 import { Ikon } from './Ikon';
+import { PilihCari } from './PilihCari';
 
 /**
  * Pilihan Pemimpin Wilayah = SELURUH isi respons API matrix/kanwils, urutan & label apa adanya
@@ -30,8 +32,10 @@ export function FilterUnit({ akar, cakupan, onBuka }: { akar: Cakupan; cakupan: 
   const kanwilId = akar.tingkat === 'nasional' ? pos.kanwilId : posisiCakupan(akar).kanwilId;
   // Pimpinan Cabang diambil dari API berdasarkan kode wilayah terpilih.
   const cabangApi = useCabang(akar.tingkat === 'nasional' || akar.tingkat === 'kanwil' ? kanwilId : undefined);
-  if (akar.tingkat === 'mo') return null;
   const cabangId = akar.tingkat === 'cabang' ? akar.id : pos.cabangId;
+  // Marketing Officer diambil dari API berdasarkan kode cabang terpilih.
+  const moApi = useMarketing(akar.tingkat === 'mo' ? undefined : cabangId);
+  if (akar.tingkat === 'mo') return null;
 
   const tampilKanwil = akar.tingkat === 'nasional';
   const tampilCabang = akar.tingkat === 'nasional' || akar.tingkat === 'kanwil';
@@ -41,56 +45,42 @@ export function FilterUnit({ akar, cakupan, onBuka }: { akar: Cakupan; cakupan: 
     <div className="filter-unit" role="group" aria-label="Filter unit">
       <span className="teks-redup"><Ikon nama="users" ukuran={16} /> Filter</span>
       {tampilKanwil && (
-        <label className="pilih-filter">
-          <span>
-            Pemimpin Wilayah
-            {kanwilApi.status === 'galat' && (
-              <small className="sumber-lokal" title={`API matrix/kanwils tidak terjangkau (${kanwilApi.pesan})`}> · data lokal</small>
-            )}
-          </span>
-          <select
-            value={kanwilId ?? ''} aria-busy={kanwilApi.status === 'memuat'}
-            onChange={(e) => onBuka(e.target.value ? { tingkat: 'kanwil', id: e.target.value } : akar)}
-          >
-            {kanwilApi.status === 'memuat'
-              ? <option value={kanwilId ?? ''}>Memuat daftar wilayah…</option>
-              : <option value="">Semua Pemimpin Wilayah</option>}
-            {pilihanWilayah(kanwilApi).map((k) => <option key={k.nilai} value={k.nilai}>{k.nama}</option>)}
-          </select>
-        </label>
+        <PilihCari
+          label="Pemimpin Wilayah" labelSemua="Semua Pemimpin Wilayah"
+          keterangan={kanwilApi.status === 'galat' && (
+            <small className="sumber-lokal" title={`API matrix/kanwils tidak terjangkau (${kanwilApi.pesan})`}> · data lokal</small>
+          )}
+          nilai={kanwilId ?? ''} memuat={kanwilApi.status === 'memuat'} pesanMemuat="Memuat daftar wilayah…"
+          opsi={pilihanWilayah(kanwilApi)}
+          onPilih={(v) => onBuka(v ? { tingkat: 'kanwil', id: v } : akar)}
+        />
       )}
       {tampilCabang && (
-        <label className="pilih-filter">
-          <span>
-            Pimpinan Cabang
-            {cabangApi.status === 'galat' && (
-              <small className="sumber-lokal" title={`API matrix/branches tidak terjangkau (${cabangApi.pesan})`}> · data lokal</small>
-            )}
-          </span>
-          <select
-            value={cabangId ?? ''} disabled={!kanwilId} aria-busy={cabangApi.status === 'memuat'}
-            title={!kanwilId ? 'Pilih Pemimpin Wilayah dulu' : undefined}
-            onChange={(e) => onBuka(e.target.value ? { tingkat: 'cabang', id: e.target.value } : kanwilId ? { tingkat: 'kanwil', id: kanwilId } : akar)}
-          >
-            {!kanwilId && <option value="">Pilih Pemimpin Wilayah dulu</option>}
-            {kanwilId && cabangApi.status === 'memuat' && <option value={cabangId ?? ''}>Memuat daftar cabang…</option>}
-            {kanwilId && cabangApi.status !== 'memuat' && <option value="">Semua Pimpinan Cabang</option>}
-            {kanwilId && (cabangApi.status === 'ok' ? cabangApi.data : cabangApi.status === 'galat' ? pilihanCabang(kanwilId) : [])
-              .map((c) => <option key={c.id} value={c.id}>{c.nama}</option>)}
-          </select>
-        </label>
+        <PilihCari
+          label="Pimpinan Cabang" labelSemua="Semua Pimpinan Cabang"
+          keterangan={cabangApi.status === 'galat' && (
+            <small className="sumber-lokal" title={`API matrix/branches tidak terjangkau (${cabangApi.pesan})`}> · data lokal</small>
+          )}
+          nilai={cabangId ?? ''} nonaktif={!kanwilId} pesanNonaktif="Pilih Pemimpin Wilayah dulu"
+          pesanKosong="Belum ada cabang di wilayah ini"
+          memuat={!!kanwilId && cabangApi.status === 'memuat'} pesanMemuat="Memuat daftar cabang…"
+          opsi={(kanwilId ? (cabangApi.status === 'ok' ? cabangApi.data : cabangApi.status === 'galat' ? pilihanCabang(kanwilId) : []) : [])
+            .map((c) => ({ nilai: c.id, nama: c.nama }))}
+          onPilih={(v) => onBuka(v ? { tingkat: 'cabang', id: v } : kanwilId ? { tingkat: 'kanwil', id: kanwilId } : akar)}
+        />
       )}
-      <label className="pilih-filter">
-        <span>Marketing Officer</span>
-        <select
-          value={pos.moId ?? ''} disabled={!cabangId}
-          title={!cabangId ? 'Pilih Pimpinan Cabang dulu' : undefined}
-          onChange={(e) => onBuka(e.target.value ? { tingkat: 'mo', id: e.target.value } : cabangId ? { tingkat: 'cabang', id: cabangId } : akar)}
-        >
-          <option value="">{cabangId ? 'Semua Marketing Officer' : 'Pilih Pimpinan Cabang dulu'}</option>
-          {cabangId && pilihanMO(cabangId).map((m) => <option key={m.id} value={m.id}>{m.nama}</option>)}
-        </select>
-      </label>
+      <PilihCari
+        label="Marketing Officer" labelSemua="Semua Marketing Officer"
+        keterangan={moApi.status === 'galat' && (
+          <small className="sumber-lokal" title={`API matrix/marketings tidak terjangkau (${moApi.pesan})`}> · data lokal</small>
+        )}
+        nilai={pos.moId ?? ''} nonaktif={!cabangId} pesanNonaktif="Pilih Pimpinan Cabang dulu"
+        memuat={moApi.status === 'memuat'} pesanMemuat="Memuat daftar marketing…"
+        pesanKosong="Belum ada Marketing Officer di cabang ini"
+        opsi={(moApi.status === 'ok' ? moApi.data : cabangId && (moApi.status === 'lokal' || moApi.status === 'galat') ? pilihanMO(cabangId) : [])
+          .map((m) => ({ nilai: m.id, nama: m.nama }))}
+        onPilih={(v) => onBuka(v ? { tingkat: 'mo', id: v } : cabangId ? { tingkat: 'cabang', id: cabangId } : akar)}
+      />
       {!diAkar && (
         <button type="button" className="tombol kecil sekunder" onClick={() => onBuka(akar)}>
           <Ikon nama="x" ukuran={14} /> Atur ulang

@@ -63,14 +63,38 @@ export const kodeCabangApi = (id: string) => cabangApi.get(id)?.kodeApi;
 export const cabangAdaData = (id: string) => petaCabang.has(id);
 const kanwilDariCabang = (id: string) => petaCabang.get(id)?.kanwilId ?? cabangApi.get(id)?.kanwilId;
 
+// ── Marketing Officer dari API matrix/marketings ────────────────────────────
+interface MOTerdaftar { nama: string; cabangId: string; kodeApi: string }
+const moApi = new Map<string, MOTerdaftar>();
+
+/** Mendaftarkan MO hasil API untuk satu cabang; mengembalikan pilihan filter { id, nama }. */
+export function daftarkanMOApi(cabangId: string, daftar: { kodeApi: string; nama: string }[]) {
+  // Nama kembar (value berbeda) diberi nomor urut supaya bisa dibedakan. `value` SENGAJA tidak
+  // ditampilkan: sebagian berisi alamat email pribadi (data pribadi, UU PDP).
+  const hitung = new Map<string, number>(), urut = new Map<string, number>();
+  daftar.forEach((x) => hitung.set(x.nama, (hitung.get(x.nama) ?? 0) + 1));
+  return daftar.map((x) => {
+    const id = `API:${cabangId}:${x.kodeApi}`;
+    const ke = (urut.get(x.nama) ?? 0) + 1;
+    urut.set(x.nama, ke);
+    const nama = (hitung.get(x.nama) ?? 0) > 1 ? `${x.nama} (${ke})` : x.nama;
+    moApi.set(id, { nama, cabangId, kodeApi: x.kodeApi });
+    return { id, nama };
+  });
+}
+export const kodeMOApi = (id: string) => moApi.get(id)?.kodeApi;
+/** true bila MO ini sudah punya data di dashboard (bukan hanya terdaftar di API). */
+export const moAdaData = (id: string) => petaMO.has(id);
+const cabangDariMO = (id: string) => petaMO.get(id)?.cabangId ?? moApi.get(id)?.cabangId;
+
 export function dalamAkar(akar: Cakupan, c: Cakupan): boolean {
   if (akar.tingkat === 'nasional') return true;
   if (akar.tingkat === c.tingkat) return akar.id === c.id;
   if (akar.tingkat === 'kanwil') {
     if (c.tingkat === 'cabang') return kanwilDariCabang(c.id) === akar.id;
-    if (c.tingkat === 'mo') return petaMO.get(c.id)?.kanwilId === akar.id;
+    if (c.tingkat === 'mo') { const cb = cabangDariMO(c.id); return !!cb && kanwilDariCabang(cb) === akar.id; }
   }
-  if (akar.tingkat === 'cabang' && c.tingkat === 'mo') return petaMO.get(c.id)?.cabangId === akar.id;
+  if (akar.tingkat === 'cabang' && c.tingkat === 'mo') return cabangDariMO(c.id) === akar.id;
   return false;
 }
 
@@ -79,7 +103,7 @@ export function posisiCakupan(c: Cakupan): { kanwilId?: string; cabangId?: strin
   switch (c.tingkat) {
     case 'kanwil': return { kanwilId: c.id };
     case 'cabang': return { kanwilId: kanwilDariCabang(c.id), cabangId: c.id };
-    case 'mo': { const m = petaMO.get(c.id); return { kanwilId: m?.kanwilId, cabangId: m?.cabangId, moId: c.id }; }
+    case 'mo': { const cb = cabangDariMO(c.id); return { kanwilId: cb ? kanwilDariCabang(cb) : undefined, cabangId: cb, moId: c.id }; }
     default: return {};
   }
 }
@@ -106,7 +130,7 @@ export function namaCakupan(c: Cakupan): string {
     case 'nasional': return 'Nasional';
     case 'kanwil': return petaKanwil.get(c.id)?.nama ?? labelWilayahApi.get(c.id) ?? c.id;
     case 'cabang': return petaCabang.get(c.id)?.nama ?? cabangApi.get(c.id)?.nama ?? c.id;
-    default: return petaMO.get(c.id)?.kode ?? c.id;
+    default: return petaMO.get(c.id)?.kode ?? moApi.get(c.id)?.nama ?? c.id;
   }
 }
 
@@ -119,8 +143,8 @@ export function jalur(c: Cakupan, akar: Cakupan): Cakupan[] {
     semua.push(...(kw ? [{ tingkat: 'kanwil' as const, id: kw }] : []), c);
   }
   if (c.tingkat === 'mo') {
-    const m = petaMO.get(c.id)!;
-    semua.push({ tingkat: 'kanwil', id: m.kanwilId }, { tingkat: 'cabang', id: m.cabangId }, c);
+    const cb = cabangDariMO(c.id), kw = cb ? kanwilDariCabang(cb) : undefined;
+    semua.push(...(kw ? [{ tingkat: 'kanwil' as const, id: kw }] : []), ...(cb ? [{ tingkat: 'cabang' as const, id: cb }] : []), c);
   }
   const i = semua.findIndex((x) => x.tingkat === akar.tingkat && x.id === akar.id);
   return semua.slice(Math.max(0, i));

@@ -607,3 +607,43 @@ button.avatar:hover, button.avatar[aria-expanded='true'] { box-shadow: 0 0 0 2px
 .data-kosong { display: grid; justify-items: center; gap: 12px; text-align: center; padding: 48px 24px; max-width: 640px; margin: 8px auto 28px; }
 .data-kosong h2 { font-size: 22px; }
 .data-kosong p { max-width: 480px; line-height: 1.5; }
+
+/* ── Dropdown berpencarian ────────────────────────────────────────────────── */
+.pilih-cari { position: relative; }
+.pemicu-cari {
+  width: 100%; max-width: 260px; min-width: 200px; height: 44px; padding: 0 12px 0 14px;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  border-radius: 999px; border: 1px solid var(--garis); background: var(--permukaan);
+  font-size: 15px; font-weight: 600; text-align: left; color: var(--tinta);
+}
+.pemicu-cari:hover:not(:disabled) { border-color: var(--garis-kuat); }
+.pemicu-cari[aria-expanded='true'] { border-color: var(--seri-1); box-shadow: 0 0 0 3px var(--merek-lembut); }
+.pemicu-cari:disabled { opacity: 0.6; cursor: not-allowed; font-weight: 500; }
+.pemicu-cari svg { flex: none; color: var(--redup); }
+.pemicu-teks { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.panel-cari {
+  position: absolute; z-index: 40; top: calc(100% + 6px); left: 0; width: max(100%, 320px); max-width: calc(100vw - 32px);
+  background: var(--permukaan); border: 1px solid var(--garis); border-radius: 14px; box-shadow: var(--bayang-tinggi);
+  padding: 8px; display: grid; gap: 6px;
+}
+.kolom-cari {
+  display: flex; align-items: center; gap: 8px; height: 42px; padding: 0 8px 0 12px;
+  border: 1px solid var(--garis-kuat); border-radius: 10px; background: var(--permukaan-2); color: var(--redup);
+}
+.kolom-cari:focus-within { border-color: var(--seri-1); }
+.kolom-cari input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font-size: 15px; color: var(--tinta); }
+.hapus-cari { width: 28px; height: 28px; border: 0; border-radius: 8px; background: transparent; display: grid; place-items: center; color: var(--redup); }
+.hapus-cari:hover { background: var(--garis); color: var(--tinta); }
+/* Tinggi terbatas + scroll: daftar panjang tidak memenuhi layar. */
+.daftar-cari { list-style: none; margin: 0; padding: 0; max-height: 300px; overflow-y: auto; overscroll-behavior: contain; }
+.daftar-cari li {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  min-height: 40px; padding: 8px 10px; border-radius: 8px; font-size: 15px; cursor: pointer;
+}
+.daftar-cari li.disorot { background: var(--permukaan-2); }
+.daftar-cari li.terpilih { color: var(--merek-tinta); font-weight: 600; }
+.daftar-cari li.terpilih svg { flex: none; }
+.daftar-cari li.opsi-semua { border-bottom: 1px solid var(--garis); border-radius: 8px 8px 0 0; margin-bottom: 2px; }
+.daftar-cari .kosong-cari { cursor: default; color: var(--redup); justify-content: center; }
+.jumlah-cari { font-size: 12.5px; color: var(--redup); padding: 2px 10px 0; margin: 0; }
+@media (max-width: 560px) { .pemicu-cari { max-width: none; } .panel-cari { width: 100%; } }

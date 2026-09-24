@@ -27,9 +27,14 @@ export function Kinerja({ d, onBuka, onEksporPosisi }: { d: Dasbor; onBuka: (c: 
       <div className="tumpuk">
         <Kartu>
           <KepalaKartu
-            ikon="chart" judul={`Peringkat ${d.labelAnak}`} sub="Klik nama untuk turun satu tingkat."
-            aksi={<button type="button" className="tombol kecil sekunder" onClick={onEksporPosisi}><Ikon nama="download" ukuran={16} /> CSV</button>}
+            ikon="chart" judul={d.labelAnak ? `Peringkat ${d.labelAnak}` : 'Peringkat unit'} sub="Klik nama untuk turun satu tingkat."
+            aksi={baris.length > 0 && <button type="button" className="tombol kecil sekunder" onClick={onEksporPosisi}><Ikon nama="download" ukuran={16} /> CSV</button>}
           />
+          {baris.length === 0 ? (
+            <p className="kosong-isi">
+              Tidak ada unit di bawah {d.nama} untuk diperingkat. Pilih cabang atau wilayah di filter untuk membandingkan unit.
+            </p>
+          ) : (
           <div className="tabel-bungkus">
             <table className="tabel">
               <thead>
@@ -55,6 +60,7 @@ export function Kinerja({ d, onBuka, onEksporPosisi }: { d: Dasbor; onBuka: (c: 
               </tbody>
             </table>
           </div>
+          )}
           {baris.length > 10 && (
             <button type="button" className="tombol sekunder lebar" onClick={() => setSemua(!semua)}>
               {semua ? 'Tampilkan 10 teratas' : `Tampilkan semua ${baris.length} ${d.labelAnak}`}

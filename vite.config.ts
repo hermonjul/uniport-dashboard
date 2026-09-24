@@ -32,6 +32,21 @@ export default defineConfig(({ mode }) => {
           '/api-go': {
             target: go.origin, changeOrigin: true,
             rewrite: (p: string) => p.replace(/^\/api-go/, dasarGo),
+            // Backend tidak terjangkau → jawab cepat dengan 502 berbentuk sama seperti balasan backend,
+            // alih-alih menggantung sampai koneksi OS menyerah.
+            configure: (proxy) => {
+              // proxyTimeout bawaan tidak berlaku saat tahap membuka koneksi; pasang batas sendiri.
+              proxy.on('proxyReq', (proxyReq) => {
+                const t = setTimeout(() => proxyReq.destroy(Object.assign(new Error('ETIMEDOUT'), { code: 'ETIMEDOUT' })), 8000);
+                proxyReq.on('response', () => clearTimeout(t));
+                proxyReq.on('close', () => clearTimeout(t));
+              });
+              proxy.on('error', (err, _req, res) => {
+                if (!('writeHead' in res) || res.headersSent) return;
+                res.writeHead(502, { 'Content-Type': 'application/json; charset=utf-8' });
+                res.end(JSON.stringify({ success: false, message: `Backend Go (${go.host}) tidak terjangkau: ${(err as NodeJS.ErrnoException).code ?? err.message}` }));
+              });
+            },
           },
         }),
       },
